@@ -22,13 +22,17 @@
   "dependencies": {
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
+    "@nestjs/event-emitter": "^3.0.0",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/sequelize": "^11.0.0",
     "@sequelize/core": "7.0.0-alpha.44",
     "@sequelize/sqlite3": "7.0.0-alpha.44",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "sequelize-typescript": "^2.1.6"
+    "sequelize-typescript": "^2.1.6",
+    "sqlite3": "^5.1.7"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
