@@ -15,6 +15,9 @@ export default function fetchRanking(baseUrl: string): Promise<PlayerData[]> {
       if (res.ok) {
         return res.json();
       }
+      else if (res.status === 404) {
+        return [];
+      }
       throw new Error("Failed to fetch ranking");
     });
 }

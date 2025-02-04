@@ -18,30 +18,32 @@ interface RankingLadderProps {
 const RankingLadder: FC<RankingLadderProps> = (props) => {
   const { data } = props;
 
-  // return(<></>)
-
   return (
     <div data-testid="RankingLadder" className="h-full">
       <AnimatePresence>
         <div className="pt-4 columns-8 gap-4 overflow-x-auto max-h-full themed-scrollbar">
-          {data.map((player) => (
-            <motion.div
-              key={player.id}
-              initial={{ scale: 0 }}
-              animate={{
-                scale: 1,
-                transition: {
-                  delay: 0.3,
-                  type: "spring",
-                  stiffness: 260,
-                  damping: 40,
-                },
-              }}
-              layout
-            >
-              <LadderItem player={player} />
-            </motion.div>
-          ))}
+          {data.length === 0 ? (
+            <div className="text-center text-gray-500">Aucun joueur à afficher</div>
+          ) : (
+            data.map((player) => (
+              <motion.div
+                key={player.id}
+                initial={{ scale: 0 }}
+                animate={{
+                  scale: 1,
+                  transition: {
+                    delay: 0.3,
+                    type: "spring",
+                    stiffness: 260,
+                    damping: 40,
+                  },
+                }}
+                layout
+              >
+                <LadderItem player={player} />
+              </motion.div>
+            ))
+          )}
         </div>
       </AnimatePresence>
     </div>
