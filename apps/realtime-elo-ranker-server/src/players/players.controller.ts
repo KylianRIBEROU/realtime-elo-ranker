@@ -15,18 +15,18 @@ export class PlayersController {
             return res.status(HttpStatus.BAD_REQUEST)
             .json({
                 code: HttpStatus.BAD_REQUEST, 
-                message: 'L\'identifiant du joueur n\est pas valide.' 
+                message: 'L\'identifiant du joueur n\'est pas valide.' 
             });
         }
         const playerExists = await this.playersService.findOne(id);
         if (playerExists) {
-            return res.status(HttpStatus.BAD_REQUEST)
+            return res.status(HttpStatus.CONFLICT)
             .json({
                 code: HttpStatus.CONFLICT, 
                 message: 'Le joueur existe déjà.' 
             });
         }
-        const playerResponse = this.playersService.create(id);
+        const playerResponse = await this.playersService.create(id);
         return res.status(HttpStatus.OK).json({
             playerResponse
           });

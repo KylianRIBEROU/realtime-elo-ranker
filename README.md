@@ -2,6 +2,7 @@
 
 Realtime Elo Ranker est une application web permettant de simuler des matchs entre des joueurs et de calculer et afficher leur classement Elo en temps réel.
 
+
 ## Conteneurs Métiers
 
 `apps/realtime-elo-ranker-server` : Serveur de l'application (à implémenter)
@@ -30,6 +31,15 @@ Realtime Elo Ranker est une application web permettant de simuler des matchs ent
 
 `libs/ui` : Librairie de composants graphiques
   - Contiendra les composants graphiques réutilisables pour le client
+
+## Documentation du serveur
+
+Documentation du serveur de l'application implémenté durant les TP de Développement Avancé : 
+
+`./apps/realtime-elo-ranker-server/README.md`
+
+
+[documentation serveur](./apps/realtime-elo-ranker-server/README.md)
 
 ## Lancer l'application cliente
 

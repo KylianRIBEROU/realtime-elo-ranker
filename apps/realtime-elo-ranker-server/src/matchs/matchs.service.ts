@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { Player } from '../db/models/player.model';
-import { UpdatedRankingEvent } from 'src/rankings/updated-ranking-event';
+import { UpdatedRankingEvent } from '../rankings/updated-ranking-event';
 import { PlayerDto } from '../players/player.dto';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 

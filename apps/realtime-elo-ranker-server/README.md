@@ -1,54 +1,191 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
-
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
-
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+# TP Développement avancé
 
 ## Description
 
+Serveur backend de l'application REALTIME-ELO-RANKER.
+
+Serveur développé par Kylian Riberou. C'est une API qui expose des routes pour la gestion de joueurs, de leur rang, et pour l'enregistrement de matchs entre joueurs.
+
+Une description de ces routes est accessible [dans le dossier docs/swagger](../../docs/swagger/swagger.yaml). 
+
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
-## Project setup
+## Vidéo de démonstration
 
-```bash
-$ pnpm install
+Dans le cas où vous n'arriveriez pas à lancer le projet ( y compris le client frontend ), la vidéo suivante présente une courte démonstration de l'interface client utilisant les des routes exposées par le serveur.
+
+<video src="./assets/video_presentation_client_serveur.mp4" 
+width="" height="" controls>
+
+## Lancer le projet
+
+dans le dossier de projet `apps/realtime-elo-ranker-server` ( celui où se trouve ce fichier ), lancer la commande suivante : 
+
+````bash
+pnpm run start:dev
+````
+
+Ensuite lancer le client en suivant les instructions dans son dossier respectif.
+
+## Fonctionnalités implémentées
+
+Routes spécifiées :
+- créer un joueur
+- récupérer tous les joueurs
+- jouer un match entre joueurs
+- s'abonner au flux de mise à jour de joueurs
+
+Le serveur backend comprends donc les fonctionnalités suivantes : 
+- implémentation des routes présentées précédemment
+- calcul de l'elo des joueurs pour déterminer le résultat d'un match ou l'élo de base d'un nouveau joueur créé
+- Base de données `SQLite` pour le stockage des rangs de joueur, avec l'ORM `Sequelize`
+- Utilisation d'un **Event-Emitter** pour gérer et transmettre des informations à chaque modification d'informations de joueurs
+- **SSE** ( Server-Side Events ) : envoi automatique aux clients abonnés des mises à jour de rang effectuées par le serveur
+- **Système de mise en cache** sur les rangs des joueurs et l'historique des matchs, pour éviter trop de requêtes dans la base de données
+- Tests d'intégration et de bout en bout pour s'assurer que l'application est bien fonctionnelle, avec une bonne couverture de code
+
+## Détail des fonctionnalités implémentées
+
+### Base de données
+
+Base de données SQLite contenant les informations de joueurs.
+
+Création de la table player avec l'ORM **Sequelize**.
+
+```typescript
+import { Table, Column, Model, DataType } from 'sequelize-typescript';
+
+@Table
+export class Player extends Model {
+    @Column({
+        type: DataType.STRING,
+        allowNull: false,
+        primaryKey: true,
+    })
+    id: string;
+
+    @Column({
+        type: DataType.INTEGER,
+        allowNull: false,
+        defaultValue: 1000,
+    })
+    rank: number;
+}
 ```
 
-## Compile and run the project
+### Emission d'évènements
 
-```bash
-# development
-$ pnpm run start
+Grâce à l'EventEmitter de Nest, nous pouvons émettre des événements à certains endroits de l'application, auxquels elle pourra réagir en conséquence. 
 
-# watch mode
-$ pnpm run start:dev
+L'objectif ici est d'envoyer aux clients les données mise à jour à chaque évènement émis lors de la modification du rang d'un joueur.
 
-# production mode
-$ pnpm run start:prod
+[app.module.ts](./src/app.module.ts)
+```typescript
+@Module({
+  // initialisation du module EventEmitter
+  imports: [EventEmitterModule.forRoot(), RankingModule, PlayersModule, MatchModule, DatabaseModule],
+  controllers: [AppController],
+  providers: [AppService],
+})
+export class AppModule {}
 ```
 
-## Run tests
+Emission d'un évènement après la création d'un joueur.
+
+[player.service.ts](./src/players/players.service.ts)
+```typescript
+  @Injectable()
+  export class PlayersService {
+    constructor(@InjectModel(Player) private playerModel: typeof Player,
+      private eventEmitter: EventEmitter2
+  ) {}
+
+    async create(id: string): Promise<PlayerDto | null> {
+      const rank = await this.calculateDefaultRanking();
+      try {
+        const player = await this.playerModel.create({ id, rank });
+        console.log("Emit updated-ranking after player creation");
+        // emission évènement
+        this.eventEmitter.emit('updated-ranking', new UpdatedRankingEvent(player.id, player.rank));
+        return PlayerDto.fromEntity(player);
+      } catch (err) {
+        console.error(err);
+        return null;
+      }
+    }
+  }
+```
+
+Et émission d'un évènement pour publier les résultats d'un match
+
+[match.service.ts](./src/matchs/matchs.service.ts)
+```typescript
+ async registerMatchResult(winnerId: string, loserId: string, draw: boolean) {
+
+    // code pour le calcul du résultat du match
+    // ...
+    
+    // émission évènements pour modification du rang des deux joueurs
+    console.log("Emit updated-ranking after match result");
+    this.eventEmitter.emit('updated-ranking', 
+      new UpdatedRankingEvent(winnerDto.id, winnerDto.rank));
+    this.eventEmitter.emit('updated-ranking',
+      new UpdatedRankingEvent(loserDto.id, loserDto.rank));
+      
+    return { winnerDto, loserDto };
+  }
+```
+
+Dès qu'un évènement est émis, il est récupéré dans la classe `RankingEventService` avec l'annotation `@OnEvent('updated-ranking')`
+
+[ranking.events.service.ts](./src/rankings/rankings.events.service.ts)
+
+```typescript
+@Injectable()
+export class RankingEventsService {
+  private rankingUpdates = new Subject<UpdatedRankingEvent>();
+
+  @OnEvent('updated-ranking')
+  handleUpdatedRanking(payload: UpdatedRankingEvent) {
+    console.log('Mise à jour classement : ', payload);
+    // passe l'évènement généré au controller Ranking
+    this.rankingUpdates.next(payload);
+  }
+}
+```
+
+Le controller ranking récupère cet évènement et l'envoie à tous les clients abonnés à la route, avec un **SSE**.
+
+[rankings.controller.ts](./src//rankings/rankings.controller.ts)
+
+```typescript
+@Get('events')
+@Sse()
+subscribeToRankingUpdates(): Observable<MessageEvent> {
+    console.log("a client Subscribed to ranking updates");
+  // envoi aux clients des données mises à jour
+    return this.rankingEventsService.getRankingUpdates().pipe(
+    map((data) => ({
+        data: JSON.stringify({
+            type: "RankingUpdate",
+            player: {
+                id: data.id,
+                rank: data.rank
+            }
+        })
+    }))
+    );
+}
+```
+
+### Mise en cache
+
+
+### Tests
+
+Lancer les tests
 
 ```bash
-# unit tests
 $ pnpm run test
 
 # e2e tests
@@ -58,42 +195,10 @@ $ pnpm run test:e2e
 $ pnpm run test:cov
 ```
 
-## Deployment
+J'ai implémenté des tests unitaires et des tests d'intégration pour les différents modules de l'application : rankings, players et matchs.
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+![resultats test integration](./assets/integration_test_01.png)
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+Tous ces tests assurent une **couverture de code de l'application** de presque 100%. Seuls les modules ne sont pas testés ici car ils ne contiennent aucun code important et logique métier, mais que des imports de fichiers.
 
-```bash
-$ pnpm install -g mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+![resultat code coverage](./assets/coverage.png)

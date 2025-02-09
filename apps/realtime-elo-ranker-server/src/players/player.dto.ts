@@ -10,4 +10,11 @@ export class PlayerDto {
         playerDto.rank = player.rank;
         return playerDto;
     }
+
+    static fromValueSet(id: string, rank: number): PlayerDto{
+        const playerDto = new PlayerDto();
+        playerDto.id = id;
+        playerDto.rank = rank;
+        return playerDto;
+    }
 }
