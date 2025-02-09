@@ -8,8 +8,6 @@ Serveur développé par Kylian Riberou. C'est une API qui expose des routes pour
 
 Une description de ces routes est accessible [dans le dossier docs/swagger](../../docs/swagger/swagger.yaml). 
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
 ## Vidéo de démonstration
 
 Dans le cas où vous n'arriveriez pas à lancer le projet ( y compris le client frontend ), la vidéo suivante présente une courte démonstration de l'interface client utilisant les des routes exposées par le serveur.
@@ -180,6 +178,60 @@ subscribeToRankingUpdates(): Observable<MessageEvent> {
 
 ### Mise en cache
 
+En plus de la base de données, un stockage dynamique des rangs est fait dans le `ranking.service`. 
+
+Une liste stocke en mémoire les données, et c'est celle-ci qui est renvoyée lors d'une requête du client, au lieu de refaire une requête en base.
+
+[rankings.service.ts](./src/rankings/rankings.service.ts)
+```typescript
+export class RankingsService {
+    // stockage en mémoire des rangs
+    private ranking: PlayerDto[];
+
+    constructor(@InjectModel(Player) private playerModel: typeof Player) {
+        this.ranking = [];
+        this.updateCachedRanking();
+    }
+
+    async getRankingsSortedByRank(): Promise<PlayerDto[]> {
+        const count = await this.playerModel.findAll().then((players) => players.length);
+        // renvoi des données en mémoire si pas de changement en base de données
+        if (this.ranking.length === count) {
+            return this.ranking;
+        }
+        let players = await this.playerModel.findAll({
+            order: [['rank', 'DESC']],
+        });
+        if (players.length === 0){
+            return [];
+        }
+        // si changement en base de données, met a jour le stockage dynamique
+        this.updateRankingFromPlayerList(players);
+        players = players.sort((a, b) => b.rank - a.rank);
+        return players.map((player) => PlayerDto.fromEntity(player));
+    }
+
+    private async updateCachedRanking() {
+    // Charger tous les joueurs et leur rang depuis la base de données
+    console.log("Initialisation cache rankings");
+    const players = await this.playerModel.findAll();
+    this.ranking = players
+      .map(player => PlayerDto.fromEntity(player))
+      .sort((a, b) => b.rank - a.rank); 
+  }
+
+    private updateRankingFromPlayerList(players: Player[]){
+        console.log("Update cache ranking");
+        this.ranking = players
+        .map(player => PlayerDto.fromEntity(player))
+        .sort((a, b) => b.rank - a.rank);
+    }
+
+  getRanking(): PlayerDto[] {
+    return this.ranking;
+  }
+}
+```
 
 ### Tests
 
